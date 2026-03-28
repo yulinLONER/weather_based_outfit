@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>管理后台登录</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="min-h-screen bg-gray-50 flex items-center justify-center p-6">
+  <div class="bg-white shadow rounded-2xl w-full max-w-md p-8">
+    <h1 class="text-2xl font-bold text-gray-800 mb-6">管理后台登录</h1>
+    <form method="post" class="space-y-4">
+      <div>
+        <label class="block text-sm text-gray-600 mb-1">管理员密码</label>
+        <input name="password" type="password" required class="w-full border rounded-lg p-3 outline-none focus:ring-2 focus:ring-blue-500" />
+      </div>
+      {% if error %}
+        <div class="text-sm text-red-600">{{ error }}</div>
+      {% endif %}
+      <button type="submit" class="w-full bg-blue-600 text-white rounded-lg p-3 font-medium hover:bg-blue-700 transition">登录</button>
+    </form>
+    <div class="mt-4 text-xs text-gray-400">
+      提示：默认密码读取环境变量 ADMIN_PASSWORD。
+    </div>
+  </div>
+</body>
+</html>
+

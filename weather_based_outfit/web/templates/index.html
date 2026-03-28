@@ -1,0 +1,988 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🌤️ 智能穿搭推荐系统</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=PingFang+SC:wght@400;500;600&display=swap');
+        
+        body {
+            font-family: 'PingFang SC', 'Helvetica Neue', Arial, sans-serif;
+            background-color: #f5f5f7;
+            color: #1d1d1f;
+        }
+        
+        .card {
+            background: white;
+            border-radius: 18px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            transition: transform 0.2s;
+        }
+        
+        .card:hover {
+            transform: translateY(-2px);
+        }
+        
+        .btn-primary {
+            background-color: #0071e3;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 980px;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+        
+        .btn-primary:hover {
+            background-color: #0077ed;
+            opacity: 0.9;
+        }
+        
+        .btn-primary:disabled {
+            background-color: #999;
+            cursor: not-allowed;
+        }
+
+        .tab-btn {
+            padding: 10px 20px;
+            border-radius: 12px;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+
+        .tab-btn.active {
+            background-color: #0071e3;
+            color: white;
+        }
+
+        .recommendation-item {
+            border-left: 4px solid #0071e3;
+            padding-left: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .wardrobe-item {
+            display: flex;
+            align-items: center;
+            padding: 1rem;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        .wardrobe-item:last-child {
+            border-bottom: none;
+        }
+    </style>
+</head>
+<body class="min-h-screen">
+    <!-- Header -->
+    <header class="bg-white py-8 px-6 mb-8 text-center shadow-sm">
+        <h1 class="text-4xl font-bold text-gray-900">👔 智能穿搭推荐系统</h1>
+        <div class="mt-6 flex justify-center space-x-4">
+            <button id="tabRecommend" class="tab-btn active">
+                <i class="fas fa-magic mr-2"></i> 智能推荐
+            </button>
+            <button id="tabWardrobe" class="tab-btn">
+                <i class="fas fa-closet mr-2"></i> 我的衣橱
+            </button>
+        </div>
+    </header>
+
+    <main class="max-w-5xl mx-auto px-4 pb-12">
+        <!-- 1. 智能推荐视图 -->
+        <div id="recommendView" class="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <!-- Left Column: Input -->
+            <div class="space-y-8">
+                <!-- Weather Search -->
+                <div class="card p-6">
+                    <h2 class="text-xl font-semibold mb-6 flex items-center">
+                        <i class="fas fa-location-dot text-blue-500 mr-2"></i> 实时天气查询
+                    </h2>
+                    <div class="grid grid-cols-2 gap-4 mb-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-600 mb-1">省份</label>
+                            <input type="text" id="province" value="北京" class="w-full border border-gray-200 rounded-lg p-3 focus:ring-2 focus:ring-blue-500 outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-600 mb-1">城市</label>
+                            <input type="text" id="city" value="北京" class="w-full border border-gray-200 rounded-lg p-3 focus:ring-2 focus:ring-blue-500 outline-none">
+                        </div>
+                    </div>
+                    <button id="queryBtn" class="w-full btn-primary mt-2">
+                        查询天气 <i class="fas fa-cloud-sun ml-1"></i>
+                    </button>
+                    
+                    <div id="weatherStatus" class="mt-4 text-sm text-gray-500 text-center italic">
+                        等待查询...
+                    </div>
+                </div>
+
+                <!-- Style Preferences -->
+                <div class="card p-6">
+                    <h2 class="text-xl font-semibold mb-6 flex items-center">
+                        <i class="fas fa-palette text-purple-500 mr-2"></i> 风格与偏好
+                    </h2>
+                    <div class="mb-6">
+                        <label class="block text-sm font-medium text-gray-600 mb-2">您今天的穿搭风格</label>
+                        <select id="style" class="w-full border border-gray-200 rounded-lg p-3 focus:ring-2 focus:ring-blue-500 outline-none appearance-none">
+                            <option value="全部">全部风格</option>
+                            <option value="休闲">休闲</option>
+                            <option value="商务">商务</option>
+                            <option value="运动">运动</option>
+                            <option value="正式">正式</option>
+                        </select>
+                    </div>
+                    <div class="mb-6 flex items-center justify-between">
+                        <label class="text-sm text-gray-600 flex items-center space-x-2">
+                            <input id="useAiRecommend" type="checkbox" class="h-4 w-4">
+                            <span>AI 增强推荐</span>
+                        </label>
+                        <span id="aiStatusText" class="text-xs text-gray-400"></span>
+                    </div>
+                    <button id="recommendBtn" class="w-full btn-primary" disabled>
+                        生成智能推荐 ✨
+                    </button>
+                </div>
+            </div>
+
+            <!-- Right Column: Result -->
+            <div class="card p-6 h-fit min-h-[400px]">
+                <h2 class="text-xl font-semibold mb-6 flex items-center">
+                    <i class="fas fa-tshirt text-green-500 mr-2"></i> 穿搭建议
+                </h2>
+                <div id="resultArea" class="space-y-4">
+                    <div class="text-gray-400 text-center mt-20 italic">
+                        <i class="fas fa-lightbulb text-4xl mb-4 block"></i>
+                        提示：请输入位置查询天气，点击生成推荐。
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 2. 衣橱管理视图 -->
+        <div id="wardrobeView" class="hidden space-y-8">
+            <div class="flex justify-between items-center">
+                <h2 class="text-2xl font-bold text-gray-800">👗 我的衣橱管理</h2>
+                <button id="showAddFormBtn" class="btn-primary">
+                    <i class="fas fa-plus mr-2"></i> 添加新衣物
+                </button>
+            </div>
+
+            <!-- 添加表单 (默认隐藏) -->
+            <div id="addFormCard" class="card p-8 hidden">
+                <h3 class="text-xl font-semibold mb-6">新增衣物信息</h3>
+                <form id="addWardrobeForm" class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-600 mb-1">名称</label>
+                        <input type="text" name="title" required class="w-full border border-gray-200 rounded-lg p-2 focus:ring-2 focus:ring-blue-500 outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-600 mb-1">分类</label>
+                        <select name="category_id" id="catSelect" class="w-full border border-gray-200 rounded-lg p-2 outline-none">
+                            <!-- 动态加载 -->
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-600 mb-1">品牌</label>
+                        <input type="text" name="brand" placeholder="选填" class="w-full border border-gray-200 rounded-lg p-2 outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-600 mb-1">风格</label>
+                        <select name="style" class="w-full border border-gray-200 rounded-lg p-2 outline-none">
+                            <option value="休闲">休闲</option>
+                            <option value="商务">商务</option>
+                            <option value="运动">运动</option>
+                            <option value="正式">正式</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-600 mb-1">颜色</label>
+                        <input type="text" name="color" placeholder="如：黑色" class="w-full border border-gray-200 rounded-lg p-2 outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-600 mb-1">尺码</label>
+                        <input type="text" name="size" placeholder="如：L" class="w-full border border-gray-200 rounded-lg p-2 outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-600 mb-1">价格</label>
+                        <input type="number" name="price" value="0" class="w-full border border-gray-200 rounded-lg p-2 outline-none">
+                    </div>
+                    <div class="md:col-span-3">
+                        <label class="block text-sm font-medium text-gray-600 mb-2">适用季节</label>
+                        <div id="addSeasons" class="flex flex-wrap gap-3 text-sm text-gray-600"></div>
+                    </div>
+                    <div class="md:col-span-3">
+                        <label class="block text-sm font-medium text-gray-600 mb-2">功能标签</label>
+                        <div id="addTags" class="flex flex-wrap gap-3 text-sm text-gray-600"></div>
+                    </div>
+                    <div class="md:col-span-3">
+                        <label class="block text-sm font-medium text-gray-600 mb-2">预览图</label>
+                        <div class="flex flex-col md:flex-row md:items-center gap-4">
+                            <input id="addImageInput" type="file" accept="image/jpeg,image/png,image/webp" class="block w-full md:w-auto text-sm text-gray-600" />
+                            <div class="flex items-center gap-3">
+                                <button type="button" id="addCropBtn" class="px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm text-gray-700">裁剪</button>
+                                <div id="addUploadStatus" class="text-xs text-gray-500"></div>
+                            </div>
+                        </div>
+                        <img id="addImagePreview" class="mt-4 hidden w-full max-w-md rounded-xl border" alt="预览图" />
+                        <div class="mt-3 h-2 bg-gray-100 rounded overflow-hidden hidden" id="addUploadBarWrap">
+                            <div id="addUploadBar" class="h-2 bg-blue-500 w-0"></div>
+                        </div>
+                    </div>
+                    <div class="md:col-span-3 flex justify-end space-x-4">
+                        <button type="button" id="cancelAddBtn" class="px-6 py-2 text-gray-500">取消</button>
+                        <button type="submit" class="btn-primary px-8">保存到衣橱</button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- 编辑表单 (默认隐藏) -->
+            <div id="editFormCard" class="card p-8 hidden border-2 border-blue-400">
+                <h3 class="text-xl font-semibold mb-6 text-blue-600">编辑衣物信息</h3>
+                <form id="editWardrobeForm" class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <input type="hidden" name="id" id="editItemId">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-600 mb-1">名称</label>
+                        <input type="text" name="title" id="editTitle" required class="w-full border border-gray-200 rounded-lg p-2 focus:ring-2 focus:ring-blue-500 outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-600 mb-1">分类</label>
+                        <select name="category_id" id="editCatSelect" class="w-full border border-gray-200 rounded-lg p-2 outline-none">
+                            <!-- 动态加载 -->
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-600 mb-1">品牌</label>
+                        <input type="text" name="brand" id="editBrand" placeholder="选填" class="w-full border border-gray-200 rounded-lg p-2 outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-600 mb-1">风格</label>
+                        <select name="style" id="editStyle" class="w-full border border-gray-200 rounded-lg p-2 outline-none">
+                            <option value="休闲">休闲</option>
+                            <option value="商务">商务</option>
+                            <option value="运动">运动</option>
+                            <option value="正式">正式</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-600 mb-1">颜色</label>
+                        <input type="text" name="color" id="editColor" placeholder="如：黑色" class="w-full border border-gray-200 rounded-lg p-2 outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-600 mb-1">尺码</label>
+                        <input type="text" name="size" id="editSize" placeholder="如：L" class="w-full border border-gray-200 rounded-lg p-2 outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-600 mb-1">价格</label>
+                        <input type="number" name="price" id="editPrice" value="0" class="w-full border border-gray-200 rounded-lg p-2 outline-none">
+                    </div>
+                    <div class="md:col-span-3">
+                        <label class="block text-sm font-medium text-gray-600 mb-2">适用季节</label>
+                        <div id="editSeasons" class="flex flex-wrap gap-3 text-sm text-gray-600"></div>
+                    </div>
+                    <div class="md:col-span-3">
+                        <label class="block text-sm font-medium text-gray-600 mb-2">功能标签</label>
+                        <div id="editTags" class="flex flex-wrap gap-3 text-sm text-gray-600"></div>
+                    </div>
+                    <div class="md:col-span-3">
+                        <label class="block text-sm font-medium text-gray-600 mb-2">预览图</label>
+                        <div class="flex flex-col md:flex-row md:items-center gap-4">
+                            <input id="editImageInput" type="file" accept="image/jpeg,image/png,image/webp" class="block w-full md:w-auto text-sm text-gray-600" />
+                            <div class="flex items-center gap-3">
+                                <button type="button" id="editCropBtn" class="px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm text-gray-700">裁剪</button>
+                                <div id="editUploadStatus" class="text-xs text-gray-500"></div>
+                            </div>
+                        </div>
+                        <img id="editImagePreview" class="mt-4 hidden w-full max-w-md rounded-xl border" alt="预览图" />
+                        <div class="mt-3 h-2 bg-gray-100 rounded overflow-hidden hidden" id="editUploadBarWrap">
+                            <div id="editUploadBar" class="h-2 bg-blue-500 w-0"></div>
+                        </div>
+                    </div>
+                    <div class="md:col-span-3 flex justify-end space-x-4 mt-2">
+                        <button type="button" id="cancelEditBtn" class="px-6 py-2 text-gray-500 hover:bg-gray-100 rounded-lg transition">取消修改</button>
+                        <button type="submit" class="btn-primary px-8">保存修改</button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- 衣橱列表 -->
+            <div class="card overflow-hidden">
+                <div class="bg-gray-50 p-4 border-bottom text-gray-500 font-medium grid grid-cols-6 gap-4">
+                    <div class="col-span-2">商品名称</div>
+                    <div>分类</div>
+                    <div>品牌</div>
+                    <div>价格</div>
+                    <div class="text-center">操作</div>
+                </div>
+                <div id="wardrobeList">
+                    <!-- 动态加载 -->
+                    <div class="p-20 text-center text-gray-400">正在加载衣橱数据...</div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- 自定义确认删除弹窗 -->
+    <div id="deleteConfirmModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div class="bg-white rounded-xl p-6 w-96 max-w-[90%] shadow-xl">
+            <h3 class="text-lg font-bold mb-4 text-gray-800">确认删除</h3>
+            <p class="text-gray-600 mb-6">您确定要从衣橱中删除这件衣物吗？此操作无法撤销。</p>
+            <div class="flex justify-end space-x-3">
+                <button id="cancelDeleteBtn" class="px-4 py-2 text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-lg transition">取消</button>
+                <button id="confirmDeleteBtn" class="px-4 py-2 text-white bg-red-500 hover:bg-red-600 rounded-lg transition">确定删除</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 图片裁剪弹窗 -->
+    <div id="cropModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div class="bg-white rounded-xl p-4 w-full max-w-3xl shadow-xl">
+            <div class="flex items-center justify-between mb-3">
+                <h3 class="text-lg font-bold text-gray-800">裁剪预览图</h3>
+                <button id="closeCropBtn" class="text-gray-500 hover:text-gray-800">关闭</button>
+            </div>
+            <div class="max-h-[70vh] overflow-auto">
+                <img id="cropImage" class="max-w-full" alt="裁剪图片" />
+            </div>
+            <div class="mt-4 flex justify-end space-x-3">
+                <button id="cancelCropBtn" class="px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg">取消</button>
+                <button id="applyCropBtn" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg">应用裁剪</button>
+            </div>
+        </div>
+    </div>
+
+    <footer class="text-center py-8 text-gray-400 text-sm">
+        <p>© 2026 智能穿搭系统 | 祝您今日穿搭愉快！✨ (v1.0.2)</p>
+    </footer>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.js"></script>
+    <script>
+        let currentWeatherData = null;
+        let addSelectedFile = null;
+        let editSelectedFile = null;
+        let addCropData = null;
+        let editCropData = null;
+        let currentCropTarget = null;
+        let cropper = null;
+
+        // DOM 元素
+        const queryBtn = document.getElementById('queryBtn');
+        const recommendBtn = document.getElementById('recommendBtn');
+        const weatherStatus = document.getElementById('weatherStatus');
+        const resultArea = document.getElementById('resultArea');
+        const useAiRecommend = document.getElementById('useAiRecommend');
+        const aiStatusText = document.getElementById('aiStatusText');
+        const tabRecommend = document.getElementById('tabRecommend');
+        const tabWardrobe = document.getElementById('tabWardrobe');
+        const recommendView = document.getElementById('recommendView');
+        const wardrobeView = document.getElementById('wardrobeView');
+        const wardrobeList = document.getElementById('wardrobeList');
+        const showAddFormBtn = document.getElementById('showAddFormBtn');
+        const addFormCard = document.getElementById('addFormCard');
+        const cancelAddBtn = document.getElementById('cancelAddBtn');
+        const addWardrobeForm = document.getElementById('addWardrobeForm');
+        const catSelect = document.getElementById('catSelect');
+        const addSeasons = document.getElementById('addSeasons');
+        const addTags = document.getElementById('addTags');
+        const addImageInput = document.getElementById('addImageInput');
+        const addImagePreview = document.getElementById('addImagePreview');
+        const addCropBtn = document.getElementById('addCropBtn');
+        const addUploadStatus = document.getElementById('addUploadStatus');
+        const addUploadBarWrap = document.getElementById('addUploadBarWrap');
+        const addUploadBar = document.getElementById('addUploadBar');
+
+        // 编辑相关元素
+        const editFormCard = document.getElementById('editFormCard');
+        const cancelEditBtn = document.getElementById('cancelEditBtn');
+        const editWardrobeForm = document.getElementById('editWardrobeForm');
+        const editCatSelect = document.getElementById('editCatSelect');
+        const editSeasons = document.getElementById('editSeasons');
+        const editTags = document.getElementById('editTags');
+        const editImageInput = document.getElementById('editImageInput');
+        const editImagePreview = document.getElementById('editImagePreview');
+        const editCropBtn = document.getElementById('editCropBtn');
+        const editUploadStatus = document.getElementById('editUploadStatus');
+        const editUploadBarWrap = document.getElementById('editUploadBarWrap');
+        const editUploadBar = document.getElementById('editUploadBar');
+
+        // 删除相关元素
+        const deleteConfirmModal = document.getElementById('deleteConfirmModal');
+        const cancelDeleteBtn = document.getElementById('cancelDeleteBtn');
+        const confirmDeleteBtn = document.getElementById('confirmDeleteBtn');
+        let pendingDeleteId = null;
+
+        window.meta = { tagIdToName: {} };
+        window.currentEditingId = null;
+
+        const cropModal = document.getElementById('cropModal');
+        const cropImage = document.getElementById('cropImage');
+        const closeCropBtn = document.getElementById('closeCropBtn');
+        const cancelCropBtn = document.getElementById('cancelCropBtn');
+        const applyCropBtn = document.getElementById('applyCropBtn');
+
+        function parseJsonArrayMaybe(value) {
+            if (!value) return [];
+            if (Array.isArray(value)) return value;
+            try { return JSON.parse(value); } catch (e) { return []; }
+        }
+
+        function getCheckedValues(containerId) {
+            const el = document.getElementById(containerId);
+            if (!el) return [];
+            return Array.from(el.querySelectorAll('input[type="checkbox"]:checked')).map(i => i.value);
+        }
+
+        function setCheckedValues(containerId, values) {
+            const set = new Set(values.map(String));
+            const el = document.getElementById(containerId);
+            if (!el) return;
+            el.querySelectorAll('input[type="checkbox"]').forEach(i => { i.checked = set.has(String(i.value)); });
+        }
+
+        function renderSeasons(containerEl) {
+            const seasons = ['春', '夏', '秋', '冬'];
+            containerEl.innerHTML = seasons.map(s => `
+                <label class="inline-flex items-center space-x-2 bg-gray-50 px-3 py-2 rounded-lg border">
+                    <input type="checkbox" value="${s}" class="h-4 w-4">
+                    <span>${s}</span>
+                </label>
+            `).join('');
+        }
+
+        function renderTags(containerEl, tags) {
+            containerEl.innerHTML = tags.map(t => `
+                <label class="inline-flex items-center space-x-2 bg-gray-50 px-3 py-2 rounded-lg border">
+                    <input type="checkbox" value="${t.id}" class="h-4 w-4">
+                    <span>${t.name}</span>
+                </label>
+            `).join('');
+        }
+
+        async function loadAiStatus() {
+            try {
+                const res = await fetch('/api/ai/status');
+                const data = await res.json();
+                if (data.enabled) {
+                    aiStatusText.textContent = '已启用';
+                    useAiRecommend.disabled = false;
+                } else {
+                    aiStatusText.textContent = '未配置';
+                    useAiRecommend.checked = false;
+                    useAiRecommend.disabled = true;
+                }
+            } catch (e) {
+                aiStatusText.textContent = '';
+            }
+        }
+
+        function resetUploadUI(which) {
+            const wrap = which === 'add' ? addUploadBarWrap : editUploadBarWrap;
+            const bar = which === 'add' ? addUploadBar : editUploadBar;
+            const status = which === 'add' ? addUploadStatus : editUploadStatus;
+            wrap.classList.add('hidden');
+            bar.style.width = '0%';
+            status.textContent = '';
+        }
+
+        function setUploadProgress(which, pct, text) {
+            const wrap = which === 'add' ? addUploadBarWrap : editUploadBarWrap;
+            const bar = which === 'add' ? addUploadBar : editUploadBar;
+            const status = which === 'add' ? addUploadStatus : editUploadStatus;
+            wrap.classList.remove('hidden');
+            bar.style.width = `${pct}%`;
+            status.textContent = text || '';
+        }
+
+        async function uploadImageFile(file, productId, cropData, which) {
+            const key = `upload:${file.name}:${file.size}:${file.lastModified}:${productId}`;
+            let uploadId = localStorage.getItem(key);
+            let offset = 0;
+
+            if (uploadId) {
+                try {
+                    const st = await fetch(`/api/uploads/${uploadId}/status`);
+                    if (st.ok) {
+                        const s = await st.json();
+                        offset = s.received_bytes || 0;
+                    } else {
+                        uploadId = null;
+                        localStorage.removeItem(key);
+                    }
+                } catch (e) {
+                    uploadId = null;
+                    localStorage.removeItem(key);
+                }
+            }
+
+            if (!uploadId) {
+                const initRes = await fetch('/api/uploads/init', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ filename: file.name, mime: file.type, size: file.size })
+                });
+                const initData = await initRes.json();
+                if (!initRes.ok || !initData.success) throw new Error(initData.error || '初始化失败');
+                uploadId = initData.upload_id;
+                localStorage.setItem(key, uploadId);
+                offset = 0;
+            }
+
+            const chunkSize = 256 * 1024;
+            while (offset < file.size) {
+                const chunk = file.slice(offset, Math.min(offset + chunkSize, file.size));
+                const form = new FormData();
+                form.append('chunk', chunk, file.name);
+                form.append('offset', String(offset));
+                const res = await fetch(`/api/uploads/${uploadId}/chunk`, { method: 'POST', body: form });
+                const data = await res.json();
+                if (!res.ok || !data.success) throw new Error(data.error || '上传失败');
+                offset = data.received_bytes || (offset + chunk.size);
+                const pct = Math.min(100, Math.round((offset / file.size) * 100));
+                setUploadProgress(which, pct, `上传中 ${pct}%`);
+            }
+
+            const finRes = await fetch(`/api/uploads/${uploadId}/finalize`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ product_id: productId, crop: cropData })
+            });
+            const finData = await finRes.json();
+            if (!finRes.ok || !finData.success) throw new Error(finData.error || '入库失败');
+            localStorage.removeItem(key);
+            setUploadProgress(which, 100, '上传完成');
+            return finData;
+        }
+
+        function openCropper(file, target) {
+            currentCropTarget = target;
+            const reader = new FileReader();
+            reader.onload = () => {
+                cropImage.src = reader.result;
+                cropModal.classList.remove('hidden');
+                if (cropper) {
+                    cropper.destroy();
+                    cropper = null;
+                }
+                cropper = new Cropper(cropImage, { viewMode: 1, autoCropArea: 0.9 });
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function closeCropper() {
+            cropModal.classList.add('hidden');
+            if (cropper) {
+                cropper.destroy();
+                cropper = null;
+            }
+            currentCropTarget = null;
+        }
+
+        closeCropBtn.addEventListener('click', closeCropper);
+        cancelCropBtn.addEventListener('click', closeCropper);
+        applyCropBtn.addEventListener('click', () => {
+            if (!cropper) return closeCropper();
+            const d = cropper.getData(true);
+            const crop = { x: d.x, y: d.y, w: d.width, h: d.height };
+            if (currentCropTarget === 'add') addCropData = crop;
+            if (currentCropTarget === 'edit') editCropData = crop;
+            closeCropper();
+        });
+
+        function setPreview(el, file) {
+            if (!file) {
+                el.classList.add('hidden');
+                el.src = '';
+                return;
+            }
+            const reader = new FileReader();
+            reader.onload = () => {
+                el.src = reader.result;
+                el.classList.remove('hidden');
+            };
+            reader.readAsDataURL(file);
+        }
+
+        addImageInput.addEventListener('change', () => {
+            const f = addImageInput.files && addImageInput.files[0];
+            addSelectedFile = f || null;
+            addCropData = null;
+            resetUploadUI('add');
+            setPreview(addImagePreview, addSelectedFile);
+        });
+        editImageInput.addEventListener('change', () => {
+            const f = editImageInput.files && editImageInput.files[0];
+            editSelectedFile = f || null;
+            editCropData = null;
+            resetUploadUI('edit');
+            setPreview(editImagePreview, editSelectedFile);
+        });
+        addCropBtn.addEventListener('click', () => {
+            if (!addSelectedFile) return alert('请先选择图片');
+            openCropper(addSelectedFile, 'add');
+        });
+        editCropBtn.addEventListener('click', () => {
+            if (!editSelectedFile) return alert('请先选择图片');
+            openCropper(editSelectedFile, 'edit');
+        });
+
+        // 视图切换逻辑
+        tabRecommend.addEventListener('click', () => {
+            tabRecommend.classList.add('active');
+            tabWardrobe.classList.remove('active');
+            recommendView.classList.remove('hidden');
+            wardrobeView.classList.add('hidden');
+        });
+
+        tabWardrobe.addEventListener('click', () => {
+            tabWardrobe.classList.add('active');
+            tabRecommend.classList.remove('active');
+            wardrobeView.classList.remove('hidden');
+            recommendView.classList.add('hidden');
+            loadWardrobe();
+            loadMetadata();
+        });
+
+        // 1. 推荐系统逻辑
+        queryBtn.addEventListener('click', async () => {
+            const province = document.getElementById('province').value.trim();
+            const city = document.getElementById('city').value.trim();
+            if (!province || !city) return alert('请输入位置');
+
+            weatherStatus.textContent = '正在获取实时天气...';
+            try {
+                const response = await fetch('/api/weather', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ province, city })
+                });
+                const data = await response.json();
+                if (data.success) {
+                    currentWeatherData = data;
+                    weatherStatus.innerHTML = `✅ 已获取 ${data.city} 天气：<span class="font-bold">${data.temperature}℃</span> | ${data.weather}`;
+                    recommendBtn.disabled = false;
+                } else {
+                    weatherStatus.textContent = `❌ 查询失败: ${data.error}`;
+                }
+            } catch (error) {
+                weatherStatus.textContent = `❌ 请求出错: ${error.message}`;
+            }
+        });
+
+        recommendBtn.addEventListener('click', async () => {
+            if (!currentWeatherData) return;
+            const style = document.getElementById('style').value;
+            const use_ai = !!useAiRecommend.checked;
+            resultArea.innerHTML = '<div class="text-center py-10"><i class="fas fa-spinner fa-spin text-3xl text-blue-500"></i></div>';
+            try {
+                try {
+                    await fetch('/api/events', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ event_type: 'recommend_request', meta: { style: style, use_ai: use_ai } }) });
+                } catch (e) {}
+                const response = await fetch('/api/recommend', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        temperature: currentWeatherData.temperature,
+                        weather: currentWeatherData.weather,
+                        style: style,
+                        use_ai: use_ai
+                    })
+                });
+                const data = await response.json();
+                renderRecommendations(data);
+            } catch (error) {
+                resultArea.innerHTML = `<div class="text-red-500 text-center">获取推荐失败: ${error.message}</div>`;
+            }
+        });
+
+        function renderRecommendations(data) {
+            const { recommendations, info } = data;
+            let html = `<div class="mb-6 p-4 bg-blue-50 rounded-xl text-sm border border-blue-100">
+                <div class="flex flex-wrap gap-y-2">
+                    <span class="mr-4">🌡️ ${info.temperature}℃</span>
+                    <span class="mr-4">☁️ ${info.weather}</span>
+                    <span>🍂 ${info.season}季</span>
+                </div>
+            </div>`;
+
+            if (info.ai_tip) {
+                html += `<div class="mb-6 p-4 bg-green-50 rounded-xl text-sm border border-green-100 text-green-800">🤖 ${info.ai_tip}</div>`;
+            }
+            if (info.ai_error) {
+                html += `<div class="mb-6 p-4 bg-yellow-50 rounded-xl text-sm border border-yellow-100 text-yellow-800">⚠️ AI 推荐不可用：${info.ai_error}</div>`;
+            }
+
+            if (Object.keys(recommendations).length === 0 || Object.keys(recommendations["推荐穿搭"]).length === 0) {
+                html += `<div class="text-gray-500 text-center py-10">⚠️ 抱歉，当前衣橱中没有找到完全符合条件的穿搭。</div>`;
+            } else {
+                for (const [styleName, cats] of Object.entries(recommendations)) {
+                    html += `<div class="mb-6"><h3 class="font-bold text-lg mb-3">${styleName}</h3><div class="space-y-2">`;
+                    for (const [cat, items] of Object.entries(cats)) {
+                        html += `<div class="recommendation-item">
+                            <span class="text-gray-500 text-xs font-bold uppercase">${cat}</span>
+                            <p class="text-gray-900">${items.join(' / ')}</p>
+                        </div>`;
+                    }
+                    html += `</div></div>`;
+                }
+            }
+            resultArea.innerHTML = html;
+        }
+
+        // 2. 衣橱管理逻辑
+        async function loadWardrobe() {
+            try {
+                const response = await fetch('/api/wardrobe');
+                const items = await response.json();
+                renderWardrobe(items);
+            } catch (error) {
+                wardrobeList.innerHTML = `<div class="p-10 text-red-500 text-center">加载失败: ${error.message}</div>`;
+            }
+        }
+
+        async function loadMetadata() {
+            try {
+                const response = await fetch('/api/metadata');
+                const data = await response.json();
+                const options = data.categories.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+                catSelect.innerHTML = options;
+                editCatSelect.innerHTML = options;
+                
+                renderSeasons(addSeasons);
+                renderSeasons(editSeasons);
+
+                const tags = data.functional_tags || [];
+                window.meta.tagIdToName = Object.fromEntries(tags.map(t => [String(t.id), t.name]));
+                renderTags(addTags, tags);
+                renderTags(editTags, tags);
+            } catch (error) {}
+        }
+
+        function renderTagChips(item) {
+            const ids = parseJsonArrayMaybe(item.tag_ids);
+            if (!ids.length) return '';
+            const tags = ids.map(id => window.meta.tagIdToName[String(id)]).filter(Boolean);
+            if (!tags.length) return '';
+            return `<div class="mt-2 flex flex-wrap gap-2">${tags.slice(0, 6).map(t => `<span class="text-xs bg-blue-50 text-blue-700 px-2 py-1 rounded">${t}</span>`).join('')}</div>`;
+        }
+
+        function renderWardrobe(items) {
+            // 保存所有衣物数据以便编辑时使用
+            window.wardrobeItems = items;
+
+            if (items.length === 0) {
+                wardrobeList.innerHTML = '<div class="p-20 text-center text-gray-400">衣橱空空如也，快去添加吧！</div>';
+                return;
+            }
+            wardrobeList.innerHTML = items.map(item => `
+                <div class="wardrobe-item grid grid-cols-6 gap-4 hover:bg-gray-50 transition">
+                    <div class="col-span-2 font-medium">
+                        <div class="flex items-center gap-3">
+                            <img loading="lazy"
+                                 class="${item.has_image ? '' : 'hidden'} w-12 h-12 rounded-lg object-cover border"
+                                 src="/api/wardrobe/${item.id}/image?size=small"
+                                 onerror="this.classList.add('hidden')"
+                                 alt="预览图" />
+                            <div>
+                                <div>${item.title}</div>
+                                <div class="mt-1">
+                                    <span class="text-xs bg-gray-100 text-gray-500 px-2 py-1 rounded">${item.style || '休闲'}</span>
+                                </div>
+                            </div>
+                        </div>
+                        ${renderTagChips(item)}
+                    </div>
+                    <div class="text-gray-500">${item.category || '未分类'}</div>
+                    <div class="text-gray-500">${item.brand || '-'}</div>
+                    <div class="text-blue-600 font-semibold">¥${item.base_price}</div>
+                    <div class="text-center space-x-2">
+                        <button type="button" data-action="edit" data-id="${item.id}" class="text-blue-400 hover:text-blue-600 p-2" title="编辑">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button type="button" data-action="ai-tags" data-id="${item.id}" class="text-purple-400 hover:text-purple-600 p-2" title="AI 生成标签">
+                            <i class="fas fa-wand-magic-sparkles"></i>
+                        </button>
+                        <button type="button" data-action="delete" data-id="${item.id}" class="text-red-400 hover:text-red-600 p-2" title="删除">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        showAddFormBtn.addEventListener('click', () => addFormCard.classList.remove('hidden'));
+        cancelAddBtn.addEventListener('click', () => addFormCard.classList.add('hidden'));
+
+        addWardrobeForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const formData = new FormData(addWardrobeForm);
+            const data = Object.fromEntries(formData.entries());
+            data.seasons = getCheckedValues('addSeasons');
+            data.tag_ids = getCheckedValues('addTags');
+            
+            try {
+                const response = await fetch('/api/wardrobe', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+                const result = await response.json();
+                if (result.success) {
+                    if (addSelectedFile) {
+                        try {
+                            await uploadImageFile(addSelectedFile, result.id, addCropData, 'add');
+                        } catch (e) {
+                            alert('图片上传失败: ' + e.message);
+                        }
+                    }
+                    addFormCard.classList.add('hidden');
+                    addWardrobeForm.reset();
+                    addImageInput.value = '';
+                    addSelectedFile = null;
+                    addCropData = null;
+                    setPreview(addImagePreview, null);
+                    resetUploadUI('add');
+                    loadWardrobe();
+                } else {
+                    alert('添加失败: ' + result.error);
+                }
+            } catch (error) {
+                alert('请求出错: ' + error.message);
+            }
+        });
+
+        // --- 编辑衣物逻辑 ---
+        cancelEditBtn.addEventListener('click', () => {
+            editFormCard.classList.add('hidden');
+        });
+
+        editWardrobeForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const formData = new FormData(editWardrobeForm);
+            const data = Object.fromEntries(formData.entries());
+            const id = data.id;
+            data.seasons = getCheckedValues('editSeasons');
+            data.tag_ids = getCheckedValues('editTags');
+            
+            try {
+                const response = await fetch(`/api/wardrobe/${id}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+                const result = await response.json();
+                if (result.success) {
+                    if (editSelectedFile) {
+                        try {
+                            await uploadImageFile(editSelectedFile, Number(id), editCropData, 'edit');
+                        } catch (e) {
+                            alert('图片上传失败: ' + e.message);
+                        }
+                    }
+                    editFormCard.classList.add('hidden');
+                    loadWardrobe();
+                } else {
+                    alert('修改失败: ' + result.error);
+                }
+            } catch (error) {
+                alert('请求出错: ' + error.message);
+            }
+        });
+
+        // 统一处理列表点击事件（编辑/删除）
+        wardrobeList.addEventListener('click', async (e) => {
+            const btn = e.target.closest('button');
+            if (!btn) return;
+
+            const action = btn.getAttribute('data-action');
+            const id = btn.getAttribute('data-id');
+            if (!id || !action) return;
+
+            e.preventDefault();
+            e.stopPropagation();
+
+            if (action === 'delete') {
+                // 弹出自定义确认框
+                pendingDeleteId = id;
+                deleteConfirmModal.classList.remove('hidden');
+            } else if (action === 'edit') {
+                // 打开编辑表单并填充数据
+                const item = window.wardrobeItems.find(i => i.id == id);
+                if (item) {
+                    window.currentEditingId = item.id;
+                    document.getElementById('editItemId').value = item.id;
+                    document.getElementById('editTitle').value = item.title || '';
+                    document.getElementById('editCatSelect').value = item.category_id || '';
+                    document.getElementById('editBrand').value = item.brand || '';
+                    document.getElementById('editStyle').value = item.style || '休闲';
+                    document.getElementById('editColor').value = item.color || '';
+                    document.getElementById('editSize').value = item.size || '';
+                    document.getElementById('editPrice').value = item.base_price || 0;
+                    setCheckedValues('editSeasons', parseJsonArrayMaybe(item.seasons));
+                    setCheckedValues('editTags', parseJsonArrayMaybe(item.tag_ids));
+
+                    editImageInput.value = '';
+                    editSelectedFile = null;
+                    editCropData = null;
+                    resetUploadUI('edit');
+                    if (item.has_image) {
+                        editImagePreview.src = `/api/wardrobe/${item.id}/image?size=medium`;
+                        editImagePreview.classList.remove('hidden');
+                    } else {
+                        setPreview(editImagePreview, null);
+                    }
+                    
+                    addFormCard.classList.add('hidden'); // 关闭添加表单
+                    editFormCard.classList.remove('hidden');
+                    editFormCard.scrollIntoView({ behavior: 'smooth' });
+                }
+            } else if (action === 'ai-tags') {
+                try {
+                    const response = await fetch(`/api/wardrobe/${id}/ai-tags`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({})
+                    });
+                    const result = await response.json();
+                    if (result.success) {
+                        loadWardrobe();
+                    } else {
+                        alert('AI 生成失败: ' + (result.error || '未知错误'));
+                    }
+                } catch (error) {
+                    alert('请求出错: ' + error.message);
+                }
+            }
+        });
+
+        // 取消删除
+        cancelDeleteBtn.addEventListener('click', () => {
+            pendingDeleteId = null;
+            deleteConfirmModal.classList.add('hidden');
+        });
+
+        // 确认删除
+        confirmDeleteBtn.addEventListener('click', async () => {
+            if (!pendingDeleteId) return;
+            const id = pendingDeleteId;
+            pendingDeleteId = null;
+            deleteConfirmModal.classList.add('hidden');
+
+            try {
+                const response = await fetch(`/api/wardrobe/${id}`, { method: 'DELETE' });
+                const result = await response.json();
+                if (result.success) {
+                    loadWardrobe();
+                } else {
+                    alert('删除失败: ' + (result.error || '未知错误'));
+                }
+            } catch (error) {
+                alert('请求出错: ' + error.message);
+            }
+        });
+
+        loadAiStatus();
+    </script>
+</body>
+</html>

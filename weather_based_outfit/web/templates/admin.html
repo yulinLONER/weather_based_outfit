@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AI 配置管理后台</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="min-h-screen bg-gray-50">
+  <header class="bg-white shadow-sm">
+    <div class="max-w-5xl mx-auto px-4 py-6 flex items-center justify-between">
+      <div>
+        <h1 class="text-2xl font-bold text-gray-900">AI API 配置管理</h1>
+        <p class="text-sm text-gray-500 mt-1">配置变更实时生效（无需重启服务）</p>
+      </div>
+      <div class="flex items-center space-x-3">
+        <span id="aiEnabledBadge" class="text-xs px-3 py-1 rounded-full bg-gray-100 text-gray-600">检测中...</span>
+        <a href="/admin/logout" class="text-sm text-gray-500 hover:text-gray-800">退出</a>
+      </div>
+    </div>
+  </header>
+
+  <main class="max-w-5xl mx-auto px-4 py-8 space-y-8">
+    <div class="bg-white rounded-2xl shadow p-6">
+      <h2 class="text-lg font-bold text-gray-800 mb-4">AI 服务配置</h2>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <label class="block text-sm text-gray-600 mb-1">API Base URL</label>
+          <input id="api_base_url" class="w-full border rounded-lg p-3 outline-none focus:ring-2 focus:ring-blue-500" placeholder="https://api.openai.com" />
+        </div>
+        <div>
+          <label class="block text-sm text-gray-600 mb-1">Model</label>
+          <input id="model" class="w-full border rounded-lg p-3 outline-none focus:ring-2 focus:ring-blue-500" placeholder="gpt-4o-mini" />
+        </div>
+        <div>
+          <label class="block text-sm text-gray-600 mb-1">Timeout (seconds)</label>
+          <input id="timeout_seconds" type="number" min="5" max="120" class="w-full border rounded-lg p-3 outline-none focus:ring-2 focus:ring-blue-500" placeholder="30" />
+        </div>
+        <div>
+          <label class="block text-sm text-gray-600 mb-1">API Key</label>
+          <input id="api_key" type="password" class="w-full border rounded-lg p-3 outline-none focus:ring-2 focus:ring-blue-500" placeholder="输入后保存（页面不会回显明文）" />
+          <div class="text-xs text-gray-400 mt-1">安全提示：仅在本地数据库保存，页面不回显明文。</div>
+        </div>
+      </div>
+      <div class="mt-4 flex items-center justify-between">
+        <button id="saveAiBtn" class="bg-blue-600 text-white rounded-lg px-5 py-2 hover:bg-blue-700 transition">保存配置</button>
+        <span id="saveAiStatus" class="text-sm text-gray-500"></span>
+      </div>
+    </div>
+
+    <div class="bg-white rounded-2xl shadow p-6">
+      <h2 class="text-lg font-bold text-gray-800 mb-4">标签配置（AI 打标）</h2>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <label class="block text-sm text-gray-600 mb-1">最小置信度</label>
+          <input id="tag_min_confidence" type="number" step="0.01" min="0" max="1" class="w-full border rounded-lg p-3 outline-none focus:ring-2 focus:ring-blue-500" />
+        </div>
+        <div>
+          <label class="block text-sm text-gray-600 mb-1">单品最多标签数</label>
+          <input id="tag_max_tags" type="number" min="0" max="20" class="w-full border rounded-lg p-3 outline-none focus:ring-2 focus:ring-blue-500" />
+        </div>
+      </div>
+      <div class="mt-4">
+        <button id="saveTagBtn" class="bg-blue-600 text-white rounded-lg px-5 py-2 hover:bg-blue-700 transition">保存标签配置</button>
+        <span id="saveTagStatus" class="text-sm text-gray-500 ml-3"></span>
+      </div>
+    </div>
+
+    <div class="bg-white rounded-2xl shadow p-6">
+      <h2 class="text-lg font-bold text-gray-800 mb-4">推荐算法参数（AI 增强）</h2>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <label class="block text-sm text-gray-600 mb-1">推荐策略</label>
+          <select id="recommend_strategy" class="w-full border rounded-lg p-3 outline-none focus:ring-2 focus:ring-blue-500">
+            <option value="balanced">均衡</option>
+            <option value="style_first">风格优先</option>
+            <option value="season_first">季节优先</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-sm text-gray-600 mb-1">推荐结果缓存 TTL（秒）</label>
+          <input id="recommend_cache_ttl_seconds" type="number" min="30" max="7200" class="w-full border rounded-lg p-3 outline-none focus:ring-2 focus:ring-blue-500" />
+        </div>
+        <div>
+          <label class="block text-sm text-gray-600 mb-1">候选单品上限</label>
+          <input id="recommend_max_candidates" type="number" min="10" max="200" class="w-full border rounded-lg p-3 outline-none focus:ring-2 focus:ring-blue-500" />
+        </div>
+        <div>
+          <label class="block text-sm text-gray-600 mb-1">权重：风格</label>
+          <input id="weight_style" type="number" step="0.1" min="0" max="5" class="w-full border rounded-lg p-3 outline-none focus:ring-2 focus:ring-blue-500" />
+        </div>
+        <div>
+          <label class="block text-sm text-gray-600 mb-1">权重：季节</label>
+          <input id="weight_season" type="number" step="0.1" min="0" max="5" class="w-full border rounded-lg p-3 outline-none focus:ring-2 focus:ring-blue-500" />
+        </div>
+        <div>
+          <label class="block text-sm text-gray-600 mb-1">权重：标签</label>
+          <input id="weight_tags" type="number" step="0.1" min="0" max="5" class="w-full border rounded-lg p-3 outline-none focus:ring-2 focus:ring-blue-500" />
+        </div>
+      </div>
+      <div class="mt-4">
+        <button id="saveRecBtn" class="bg-blue-600 text-white rounded-lg px-5 py-2 hover:bg-blue-700 transition">保存推荐参数</button>
+        <span id="saveRecStatus" class="text-sm text-gray-500 ml-3"></span>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    async function fetchJson(url, options) {
+      const res = await fetch(url, options);
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || '请求失败');
+      return data;
+    }
+
+    function setBadge(enabled) {
+      const el = document.getElementById('aiEnabledBadge');
+      if (enabled) {
+        el.textContent = 'AI 已启用';
+        el.className = 'text-xs px-3 py-1 rounded-full bg-green-100 text-green-700';
+      } else {
+        el.textContent = 'AI 未启用';
+        el.className = 'text-xs px-3 py-1 rounded-full bg-gray-100 text-gray-600';
+      }
+    }
+
+    async function loadSettings() {
+      const s = await fetchJson('/admin/api/settings');
+      document.getElementById('api_base_url').value = s.api_base_url || '';
+      document.getElementById('model').value = s.model || '';
+      document.getElementById('timeout_seconds').value = s.timeout_seconds || 30;
+      document.getElementById('tag_min_confidence').value = s.tag_min_confidence || 0.65;
+      document.getElementById('tag_max_tags').value = s.tag_max_tags || 6;
+      document.getElementById('recommend_cache_ttl_seconds').value = s.recommend_cache_ttl_seconds || 600;
+      document.getElementById('recommend_max_candidates').value = s.recommend_max_candidates || 80;
+      document.getElementById('recommend_strategy').value = s.recommend_strategy || 'balanced';
+      document.getElementById('weight_style').value = s.weight_style || 1.0;
+      document.getElementById('weight_season').value = s.weight_season || 1.0;
+      document.getElementById('weight_tags').value = s.weight_tags || 0.7;
+      setBadge(!!s.ai_enabled);
+    }
+
+    document.getElementById('saveAiBtn').addEventListener('click', async () => {
+      const payload = {
+        api_base_url: document.getElementById('api_base_url').value.trim(),
+        model: document.getElementById('model').value.trim(),
+        timeout_seconds: document.getElementById('timeout_seconds').value,
+        api_key: document.getElementById('api_key').value
+      };
+      const el = document.getElementById('saveAiStatus');
+      el.textContent = '保存中...';
+      try {
+        await fetchJson('/admin/api/settings/ai', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+        document.getElementById('api_key').value = '';
+        el.textContent = '已保存';
+        await loadSettings();
+      } catch (e) {
+        el.textContent = '失败：' + e.message;
+      }
+    });
+
+    document.getElementById('saveTagBtn').addEventListener('click', async () => {
+      const payload = {
+        tag_min_confidence: document.getElementById('tag_min_confidence').value,
+        tag_max_tags: document.getElementById('tag_max_tags').value
+      };
+      const el = document.getElementById('saveTagStatus');
+      el.textContent = '保存中...';
+      try {
+        await fetchJson('/admin/api/settings/tags', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+        el.textContent = '已保存';
+        await loadSettings();
+      } catch (e) {
+        el.textContent = '失败：' + e.message;
+      }
+    });
+
+    document.getElementById('saveRecBtn').addEventListener('click', async () => {
+      const payload = {
+        recommend_cache_ttl_seconds: document.getElementById('recommend_cache_ttl_seconds').value,
+        recommend_max_candidates: document.getElementById('recommend_max_candidates').value,
+        recommend_strategy: document.getElementById('recommend_strategy').value,
+        weight_style: document.getElementById('weight_style').value,
+        weight_season: document.getElementById('weight_season').value,
+        weight_tags: document.getElementById('weight_tags').value
+      };
+      const el = document.getElementById('saveRecStatus');
+      el.textContent = '保存中...';
+      try {
+        await fetchJson('/admin/api/settings/recommend', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+        el.textContent = '已保存';
+        await loadSettings();
+      } catch (e) {
+        el.textContent = '失败：' + e.message;
+      }
+    });
+
+    loadSettings();
+  </script>
+</body>
+</html>
