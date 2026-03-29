@@ -72,31 +72,33 @@ docker run -d -p 5001:5001 --name outfit-app weather-outfit-app
 │   ├── ai_client.py    # AI 客户端
 │   ├── recommender.py  # 穿搭推荐引擎
 │   ├── integrations/   # 电商平台 API 集成
-│   ├── services/       # 商品同步与管理服务
-│   └── recommender.py  # 穿搭推荐引擎逻辑
+│   │   ├── base_client.py # 基础客户端
+│   │   └── platform_clients.py # 平台客户端集成
+│   └── services/       # 商品同步与管理服务
+│       └── sync_service.py # 商品同步服务
 ├── models/             # 商品标准化数据模型
 │   └── product.py      # Product & SKU 定义与校验
 ├── data/               # 数据存储
 │   └── wardrobe.db     # 核心商品与衣橱数据库
 ├── db/                 # 数据库管理
 │   └── manager.py      # 商品管理系统数据库初始化
-<<<<<<< HEAD
-├── web/                # 用户界面 (Frontend - Web)
+├── web/                # 用户界面
 │   ├── app_web.py      # Flask 后端服务
 │   ├── static/         # 静态资源 (CSS/JS)
 │   └── templates/      # HTML 模板
-├── docs/               # 交付文档 (数据库设计、接口说明)
+├── docs/               # 交付文档（数据库设计、接口说明）
 ├── tests/              # 单元测试与集成测试
+│   └── test_product_system.py # 商品系统测试
+├── scripts/            # 工具脚本
+│   └── seed_demo_wardrobe.py # 演示数据生成脚本
+├── config.py           # 配置管理模块
+├── .env.example        # 环境变量模板
+├── .gitignore          # Git 忽略配置
+├── requirements.txt    # 依赖包列表
+├── Dockerfile          # Docker 构建文件
 ├── run_cli.py          # 命令行版启动脚本
-└── run_web.py          # Web 版启动脚本
-```
-
-## ✨ 核心功能 (Core Features)
-
-1. **1.1 商品标准化模型 (Standardized Product Model)**: 深度支持材质、颜色(Hex/Pantone)、层级分类、功能标签、多维尺码及季节属性。
-2. **1.2 多平台 API 集成 (E-commerce Integration)**: 统一集成淘宝、拼多多、京东开放平台 API，实现详情获取、价格监控及库存同步。
-3. **1.3 自动化同步 (Auto-Sync Logic)**: 支持实时与定时同步模式，内置频率控制、异常处理及缓存优化机制。
-4. **1.4 数据质量监控 (Data Quality)**: 建立全流程同步日志与数据完整性评估体系。
+├── run_web.py          # Web 版启动脚本
+└── README.md           # 项目说明
 
 ## 🛠️ 数据源 (Data Sources)
 
