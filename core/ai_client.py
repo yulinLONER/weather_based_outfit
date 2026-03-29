@@ -21,24 +21,38 @@ class AIClientError(RuntimeError):
 
 
 def _load_ai_config() -> Optional[AIConfig]:
-    db = WardrobeDatabase()
-    conn = db.get_connection()
-    cur = conn.cursor()
-    cur.execute("SELECT key, value FROM ai_settings")
-    settings = {row["key"]: row["value"] for row in cur.fetchall()}
-    conn.close()
-
-    api_key = settings.get("api_key") or os.environ.get("AI_API_KEY")
+    """从环境变量和数据库加载 AI 配置。优先级：环境变量 > 数据库设置"""
+    # 首先从环境变量获取
+    api_key = os.environ.get("AI_API_KEY")
+    api_base_url = os.environ.get("AI_API_BASE_URL", "https://api.openai.com").rstrip("/")
+    model = os.environ.get("AI_MODEL", "gpt-4o-mini")
+    timeout_raw = os.environ.get("AI_TIMEOUT_SECONDS", "30")
+    
+    # 如果环境变量中没有，再尝试从数据库读取
+    if not api_key:
+        try:
+            db = WardrobeDatabase()
+            conn = db.get_connection()
+            cur = conn.cursor()
+            cur.execute("SELECT key, value FROM ai_settings")
+            settings = {row["key"]: row["value"] for row in cur.fetchall()}
+            conn.close()
+            
+            api_key = settings.get("api_key")
+            api_base_url = settings.get("api_base_url") or api_base_url
+            model = settings.get("model") or model
+            timeout_raw = settings.get("timeout_seconds") or timeout_raw
+        except Exception:
+            pass  # 数据库配置可选，使用默认值
+    
     if not api_key:
         return None
-
-    api_base_url = (settings.get("api_base_url") or os.environ.get("AI_API_BASE_URL") or "https://api.openai.com").rstrip("/")
-    model = settings.get("model") or os.environ.get("AI_MODEL") or "gpt-4o-mini"
-    timeout_raw = settings.get("timeout_seconds") or os.environ.get("AI_TIMEOUT_SECONDS") or "30"
+    
     try:
         timeout_seconds = int(timeout_raw)
-    except Exception:
+    except (ValueError, TypeError):
         timeout_seconds = 30
+    
     return AIConfig(api_base_url=api_base_url, api_key=api_key, model=model, timeout_seconds=timeout_seconds)
 
 

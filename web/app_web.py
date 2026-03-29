@@ -21,7 +21,18 @@ from db.manager import WardrobeDatabase
 app = Flask(__name__, 
             template_folder='templates',
             static_folder='static')
-app.secret_key = os.environ.get("FLASK_SECRET_KEY", "dev-secret-key")
+
+# 生产环境下必须设置 FLASK_SECRET_KEY
+app.secret_key = os.environ.get("FLASK_SECRET_KEY")
+if not app.secret_key:
+    if os.environ.get("FLASK_ENV") == "production":
+        raise RuntimeError(
+            "ERROR: FLASK_SECRET_KEY environment variable must be set in production. "
+            "Please set it in your .env file or environment."
+        )
+    # 开发环境下使用临时密钥（仅用于测试）
+    app.secret_key = "dev-secret-key-change-in-production"
+    app.logger.warning("⚠️  Using dev secret key - DO NOT USE IN PRODUCTION")
 
 # 强制禁用 Jinja2 模板缓存，确保每次都能读取最新的 index.html
 app.config['TEMPLATES_AUTO_RELOAD'] = True
