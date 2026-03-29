@@ -49,19 +49,6 @@ python3 run_web.py
 python3 run_cli.py
 ```
 
-## 🐳 Docker 部署
-
-```bash
-# 1. 构建镜像
-docker build -t weather-outfit-app .
-
-# 2. 启动容器
-docker run -d -p 5001:5001 --name outfit-app weather-outfit-app
-
-# 3. 访问系统
-# 在浏览器中输入：http://localhost:5001
-```
-
 ## 📁 项目结构
 
 ```
